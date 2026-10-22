@@ -54,14 +54,35 @@ try { muted = localStorage.getItem("ck_mute") === "1"; } catch {}
 function audioInit() {
   if (!ac) {
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
-    master = ac.createGain(); master.gain.value = muted ? 0 : 1; master.connect(ac.destination);
-    musicBus = ac.createGain(); musicBus.gain.value = 0.55; musicBus.connect(master);
-    sfxBus = ac.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+    // play as media, so the iPhone/iPad silent switch doesn't mute the game
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
+    silentLoop();
+    // everything runs hot into a limiter so it's loud on small speakers without clipping
+    const limiter = ac.createDynamicsCompressor();
+    limiter.threshold.value = -12; limiter.knee.value = 6; limiter.ratio.value = 12; limiter.attack.value = 0.003; limiter.release.value = 0.2;
+    master = ac.createGain(); master.gain.value = muted ? 0 : 1;
+    const drive = ac.createGain(); drive.gain.value = 3.2;
+    drive.connect(limiter).connect(master).connect(ac.destination);
+    musicBus = ac.createGain(); musicBus.gain.value = 0.6; musicBus.connect(drive);
+    sfxBus = ac.createGain(); sfxBus.gain.value = 1.4; sfxBus.connect(drive);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  if (ac.state === "suspended") ac.resume();
+  if (ac.state !== "running") ac.resume().catch(() => {});
 }
+// Older iOS only switches to media playback once an <audio> element is playing, so loop a silent one.
+let silent = null;
+function silentLoop() {
+  if (silent) return;
+  const n = 8000, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, str) => [...str].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  silent = new Audio(URL.createObjectURL(new Blob([b], { type: "audio/wav" })));
+  silent.loop = true; silent.setAttribute("playsinline", ""); silent.play().catch(() => { silent = null; });
+}
+// Safari only unlocks audio on some gesture types, so listen to all of them
+for (const ev of ["touchend", "click", "pointerup", "keydown"]) addEventListener(ev, () => audioInit(), { passive: true });
 function toggleMute() {
   muted = !muted; if (master) master.gain.value = muted ? 0 : 1;
   muteBtn.textContent = muted ? "♪✕" : "♪";
@@ -149,8 +170,8 @@ const Music = {
     const B = musicBus;
     if (s.style === "bossa") {
       // bossa bass: root, fifth on the and-of-2, root, fifth on the and-of-4
-      if (pos === 0 || pos === 4) tone("triangle", NOTE(root), t, e * 2.6, 0.22, B);
-      if (pos === 3 || pos === 7) tone("triangle", NOTE(root + 7), t, e * 0.9, 0.18, B);
+      if (pos === 0 || pos === 4) { tone("triangle", NOTE(root + 12), t, e * 2.6, 0.22, B); tone("square", NOTE(root + 12), t, e * 1.2, 0.025, B); }
+      if (pos === 3 || pos === 7) { tone("triangle", NOTE(root + 19), t, e * 0.9, 0.18, B); tone("square", NOTE(root + 19), t, e * 0.6, 0.02, B); }
       // soft electric-piano comp on the off-beats
       if ([2, 5, 7].includes(pos) && !(pos === 7 && step % 16 < 8)) for (const n of chord) tone("triangle", NOTE(root + 12 + n), t, e * 1.4, 0.035, B);
       // brush and rim click
@@ -158,7 +179,7 @@ const Music = {
       if (pos === 3 || pos === 6) tone("square", 1800, t, 0.015, 0.02, B);
     } else {
       tone("square", NOTE(root + (pos % 2 ? 12 : 0)), t, e * 0.8, 0.045, B);
-      tone("triangle", NOTE(root), t, e * 0.9, 0.12, B);
+      tone("triangle", NOTE(root + 12), t, e * 0.9, 0.12, B);
       if (pos % 2 === 0) noise(t, 0.04, 0.06, 6000, B);
       if (pos === 0 || pos === 4) noise(t, 0.12, 0.25, 180, B, "lowpass");
       if (pos === 2 || pos === 6) noise(t, 0.08, 0.12, 2000, B, "bandpass");
@@ -168,7 +189,7 @@ const Music = {
     if (m > 0) {
       let len = 1; while (mel[(i + len) % mel.length] === _ && len < 8) len++;
       const lead = s.style === "bossa" ? "square" : "sawtooth";
-      tone(lead, NOTE(m + tr), t, e * len * 0.92, s.style === "bossa" ? 0.035 : 0.03, B);
+      tone(lead, NOTE(m + tr), t, e * len * 0.92, s.style === "bossa" ? 0.05 : 0.04, B);
       if (s.style === "bossa") tone("sine", NOTE(m + tr + 12), t, e * len * 0.7, 0.012, B); // vibraphone shimmer
     }
   },
