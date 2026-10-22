@@ -3,7 +3,7 @@
 // Uses the helpers and globals from game.js.
 "use strict";
 (() => {
-  const FLOOR = 206, SC = 3, LEFT = 26, RIGHT = W - 26;
+  const FLOOR = 198, SC = 3, LEFT = 26, RIGHT = W - 26;
   const MOVES = { musk: "uppercut", zuck: "teleport", bezos: "dash", cook: "shield", huang: "beam", su: "spread", dyson: "pull", barra: "wave" };
   const ATK = {
     punch: { dur: 16, a: 4, b: 8, range: 40, dmg: 7, push: 2.5, stun: 14 },
@@ -69,11 +69,11 @@
   }
   window.enterKombat = function () {
     K = { sel: CEOS.indexOf(ceo) >= 0 ? CEOS.indexOf(ceo) : 0 };
-    document.body.classList.add("kombat");
+    document.body.classList.add("kombat"); fit();
     SFX.fight(); Music.play("tense", -2, 118);
     setState("kselect");
   };
-  function leave() { document.body.classList.remove("kombat"); K = null; Music.play("title", 0, 128); setState("title"); }
+  function leave() { document.body.classList.remove("kombat"); fit(); K = null; Music.play("title", 0, 128); setState("title"); }
   addEventListener("keydown", e => { if (e.code === "Escape" && state.startsWith("k")) leave(); });
 
   function startMatch() {
@@ -276,7 +276,7 @@
       for (let i = 0; i < 6; i++) { const fh = 8 + Math.abs(Math.sin(f * 0.3 + i * 1.7)) * 14; ctx.fillStyle = i % 2 ? "#ffb020" : "#ff4010"; ctx.fillRect(x + i * 4, FLOOR - 136 - fh, 4, fh); }
     }
     // banners
-    for (const [x, c] of [[70, K.p1.c], [W - 100, K.p2.c]]) { ctx.fillStyle = c.top === "#141414" || c.top === "#18181c" || c.top === "#202028" ? "#601020" : c.top; ctx.fillRect(x, 20, 30, 70); ctx.fillStyle = "#e0c060"; ctx.fillRect(x, 20, 30, 3); ctx.drawImage(c.sigSpr, x + 8, 40); }
+    for (const [x, c] of [[70, K.p1.c], [W - 100, K.p2.c]]) { ctx.fillStyle = c.top === "#141414" || c.top === "#18181c" || c.top === "#202028" ? "#601020" : c.top; ctx.fillRect(x, 20, 30, 70); ctx.fillStyle = "#e0c060"; ctx.fillRect(x, 20, 30, 3); ctx.drawImage(c.sigSpr, x + 8, 62); }
     // stone floor
     ctx.fillStyle = "#2a2024"; ctx.fillRect(0, FLOOR, W, H - FLOOR); ctx.fillStyle = "#3a2e32"; for (let x = 0; x < W; x += 32) ctx.fillRect(x, FLOOR, 30, 2);
     ctx.fillStyle = "#1a1014"; for (let x = 16; x < W; x += 32) ctx.fillRect(x, FLOOR + 8, 1, 10);
@@ -317,8 +317,17 @@
     };
     bar(10, K.p1, false); bar(W - 170, K.p2, true);
     txt(String(Math.max(0, Math.ceil(K.timer / 60))), W / 2, 6, "#ffe060", 16, "center");
-    if (K.p1.cd <= 0) txt("SUPER", 10, 46, K.f % 20 < 10 ? "#80e0ff" : "#fff");
+    // controls: along the bottom on a keyboard; on touch screens the bottom is the button pad, so one line up top
+    const spCol = K.p1.cd <= 0 ? (K.f % 20 < 10 ? "#ffe060" : "#fff") : "#606070";
+    if (TOUCH) {
+      txt("A PUNCH  B KICK  HOLD BACK: BLOCK", W / 2 - 40, 44, "#a08088", 8, "center"); txt("C SPECIAL", W / 2 + 140, 44, spCol, 8, "center");
+    } else {
+      ctx.fillStyle = "#000c"; ctx.fillRect(0, FLOOR + 2, W, H - FLOOR - 2);
+      txt("ARROWS MOVE   UP JUMP   HOLD BACK: BLOCK", W / 2, FLOOR + 5, "#c0a0a8", 8, "center");
+      txt("Z PUNCH   X KICK", W / 2 - 100, FLOOR + 15, "#c0a0a8", 8, "center"); txt("C SPECIAL", W / 2 + 28, FLOOR + 15, spCol, 8, "center"); txt("ESC QUIT", W / 2 + 128, FLOOR + 15, "#706070", 8, "center");
+    }
   }
+  const TOUCH = matchMedia("(pointer: coarse)").matches;
   function big(s, y, col, size = 24) { txt(s, W / 2, y, col, size, "center"); }
 
   // ---------- screens ----------
@@ -334,7 +343,7 @@
     const gx = W / 2 - 104, gy = 40;
     let go = (pressed.start || pressed.jump) && st > 10;
     if (tap) for (let i = 0; i < 8; i++) { const x = gx + (i % 4) * 52, y = gy + Math.floor(i / 4) * 52; if (tap.x >= x && tap.x < x + 52 && tap.y >= y && tap.y < y + 52) { if (K.sel === i) go = true; else { K.sel = i; SFX.select(); } } }
-    if (tap && tap.y > 150) go = true;
+    if (tap && tap.y > 150 && !(tap.x > 250 && tap.y > 208)) go = true;
     for (let i = 0; i < 8; i++) {
       const x = gx + (i % 4) * 52, y = gy + Math.floor(i / 4) * 52;
       ctx.fillStyle = i === K.sel ? "#a01010" : "#300810"; ctx.fillRect(x + 2, y + 2, 48, 48); ctx.drawImage(CEOS[i].portrait, x + 8, y + 8);
@@ -346,7 +355,8 @@
     txt("ARROWS MOVE  UP JUMP  BACK BLOCKS", W / 2, 180, "#c08080", 8, "center");
     txt("Z PUNCH  X KICK  C SPECIAL", W / 2, 191, "#c08080", 8, "center");
     txt(st % 40 < 26 ? "PRESS START" : "", W / 2, 206, "#ffe060", 8, "center");
-    txt("ESC: QUIT", W - 4, 214, "#704050", 8, "right");
+    txt(TOUCH ? "TAP HERE TO QUIT" : "ESC: QUIT", W - 4, 214, "#704050", 8, "right");
+    if (tap && tap.x > 250 && tap.y > 208) return leave();
     if (go) {
       const others = CEOS.filter((_, i) => i !== K.sel).map(c => c.id).sort(() => Math.random() - 0.5);
       K.tower = others.slice(0, 3); K.idx = 0; SFX.fight(); setState("ktower");

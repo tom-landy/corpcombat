@@ -15,7 +15,9 @@ function fit() {
   cv.style.height = Math.floor(H * s) + "px";
   // the mute button sits in the empty gap of the bottom HUD strip
   const m = document.getElementById("mute"), r = cv.getBoundingClientRect();
-  Object.assign(m.style, { left: r.left + 236 * s + "px", top: r.top + (H - 13) * s + "px", width: 30 * s + "px", height: 12 * s + "px", fontSize: 6 * s + "px" });
+  // in Kombat the bottom strip holds the controls, so it moves up under the timer
+  const k = document.body.classList.contains("kombat"), mx = k ? W / 2 - 15 : 236, my = k ? 26 : H - 13;
+  Object.assign(m.style, { left: r.left + mx * s + "px", top: r.top + my * s + "px", width: 30 * s + "px", height: 12 * s + "px", fontSize: 6 * s + "px" });
 }
 addEventListener("resize", fit);
 
