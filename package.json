@@ -1,0 +1,7 @@
+{
+  "name": "corporate-kombat",
+  "private": true,
+  "description": "Retro side-scroller: pick a CEO and fight through the corporate jungle",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

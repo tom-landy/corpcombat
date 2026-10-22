@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Corporate Kombat</title>
+<link rel="icon" href="logo.webp">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #000; }
+  #pad { position: fixed; inset: auto 0 0 0; display: none; justify-content: space-between; padding: 0 16px 16px; pointer-events: none; }
+  #pad div { display: flex; gap: 14px; }
+  #pad button { pointer-events: auto; width: 72px; height: 72px; border-radius: 50%; border: 3px solid #fff8; background: #c0101066; color: #fff; font: 16px "Press Start 2P", monospace; touch-action: none; }
+  #pad button:active, #pad button.on { background: #ff3030aa; }
+  @media (pointer: coarse) { #pad { display: flex; } }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="384" height="224"></canvas></div>
+<div id="pad">
+  <div><button data-k="left">◀</button><button data-k="right">▶</button></div>
+  <div><button data-k="special">B</button><button data-k="jump">A</button></div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
