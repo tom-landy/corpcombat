@@ -26,6 +26,8 @@ const KEYMAP = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "ri
   Space: "jump", KeyZ: "jump", KeyK: "jump", KeyX: "special", KeyJ: "special", ShiftLeft: "special", Enter: "start" };
 addEventListener("keydown", e => {
   audioInit();
+  if (state === "initials" && /^[a-z]$/i.test(e.key)) { e.preventDefault(); typeLetter(e.key.toUpperCase()); return; }
+  if (state === "initials" && e.key === "Backspace") { e.preventDefault(); initials = initials.slice(0, -1); SFX.block(); return; }
   if (e.code === "KeyM") return toggleMute();
   const k = KEYMAP[e.code]; if (!k) return;
   e.preventDefault(); if (!keys[k]) pressed[k] = true; keys[k] = true;
@@ -273,6 +275,14 @@ const RIVALS = {
            tank: ["BLOCKED FILTER", "bot", "#7a6a5a"], thrower: ["PATENT LAWYER", "suit", "#202838", "#e0e0e0"], boss: ["MEGA DUST BUNNY", "bunny", "#9a9aa4"] },
   barra: { walker: ["RECALL NOTICE", "paper", "#f4f0e0", "#d02020"], flyer: ["RANGE ANXIETY", "bubble", "#e04040", "#fff"], hopper: ["CAR SALESMAN", "suit", "#8a6a2a", "#d02020"],
            tank: ["GAS GUZZLER", "bot", "#303034"], thrower: ["EMISSIONS INSPECTOR", "suit", "#2a4a2a", "#e0e0e0"], boss: ["KING GAS GUZZLER", "bull", "#2a2a2e"] },
+};
+
+// Each arch-rival's signature attack, shouted on screen when used
+const BOSS_MOVES = {
+  musk: ["rain", "SELL-OFF!", "arrow"], huang: ["rain", "DEEP FREEZE!", "snow"],
+  zuck: ["volley", "SUBPOENA BLITZ!", "paper"], su: ["volley", "BENCHMARK BLAST!", "chip"],
+  bezos: ["lob", "RETURNS RUSH!", "parcel"], cook: ["quake", "PATENT QUAKE!", "wave"],
+  dyson: ["spawn", "DUST STORM!", ""], barra: ["charge", "FULL THROTTLE!", ""],
 };
 
 function drawHairSmall(s, c) {
@@ -541,7 +551,7 @@ let state = "title", st = 0;
 let sel = 0, ceo = CEOS[0];
 let L = null, lvl = 0, score = 0, lives = 3, levelStartScore = 0, best = 0;
 let p, cam = 0, items, enemies, shots, eshots, parts, boss, timer, frame = 0, checkpoint, keysGot, sigGot, tally, flash = 0, shake = 0, continues = 0, exitT = 0;
-let tiles = {};
+let tiles = {}, stomps = 0;
 try { best = +localStorage.getItem("ck_best") || 0; } catch {}
 const logo = new Image(); logo.src = "logo.webp";
 
@@ -577,7 +587,7 @@ function startLevel(n, fromCheckpoint) {
   enemies = L.enemies.map(e => newEnemy(e.t, e.x, e.y));
   shots = []; eshots = []; parts = []; exitT = 0;
   boss = L.boss ? { x: L.boss.x, y: L.boss.y, w: 44, h: 40, vx: 0, vy: 0, hp: 6, inv: 0, t: 0, active: false, dead: false, arena: L.boss.arena } : null;
-  keysGot = 0; sigGot = 0; timer = LEVELS[n].time * 60; checkpoint = { x: 3 * T, y: 9 * T };
+  keysGot = 0; sigGot = 0; stomps = 0; timer = LEVELS[n].time * 60; checkpoint = { x: 3 * T, y: 9 * T };
   if (!fromCheckpoint) levelStartScore = score;
   const [song, tr, bpm] = LEVELS[n].song; Music.rate = 1; Music.play(song, tr, bpm);
   spawnPlayer();
@@ -648,8 +658,26 @@ function useSpecial() {
 function killEnemy(e, stomp) {
   if (!e.alive) return;
   e.hp--; if (e.hp > 0) { e.flash = 20; SFX.stomp(); return; }
-  e.alive = false; SFX.stomp(); burst(e.x + e.w / 2, e.y + e.h / 2, "#f0f0f0", 10);
+  e.alive = false; stomps++; SFX.stomp(); burst(e.x + e.w / 2, e.y + e.h / 2, "#f0f0f0", 10);
   addScore(stomp ? 25000 : 15000, e.x, e.y - 8);
+}
+function bossAttack(move_, shout, kind, rage) {
+  if (shout) { popText(boss.x - 10, boss.y - 20, shout, "#ff6060"); SFX.fight(); }
+  const cx = boss.x + boss.w / 2, dir = Math.sign(p.x - cx) || -1, floor = FLOOR_Y;
+  const shot = o => eshots.push({ w: 8, h: 8, life: 300, delay: 0, kind, ...o });
+  const n = rage > 1 ? 7 : 5;
+  if (move_ === "rain") { // falls across the arena with gaps to stand in
+    const gap = Math.floor(Math.random() * n);
+    for (let i = 0; i < n + 1; i++) if (i !== gap) shot({ x: cam + 24 + i * (W - 48) / n, y: 24, vx: 0, vy: kind === "snow" ? 1.3 : 2, delay: i * 8, wobble: kind === "snow" });
+  }
+  if (move_ === "volley") { // low ones to jump, high ones to stay under
+    for (let i = 0; i < (rage > 1 ? 4 : 3); i++) { const high = i % 2 === 1; shot({ x: cx, y: high ? floor - 46 : floor - 12, vx: dir * 2.6, vy: 0, delay: i * 35 }); }
+  }
+  if (move_ === "lob") for (let i = 0; i < (rage > 1 ? 4 : 3); i++) shot({ x: cx, y: boss.y, vx: dir * (1 + i * 0.9), vy: -5 - i * 0.4, grav: true, bounce: 1, w: 10, h: 10, delay: i * 10 });
+  if (move_ === "quake") { boss.vy = -8; boss.vx = 0; boss.leapt = true; }
+  if (move_ === "waves") { for (const d of [-1, 1]) shot({ x: cx - 6, y: floor - 10, vx: d * (2.2 + (rage > 1) * 0.8), vy: 0, w: 14, h: 10 }); shake = 14; }
+  if (move_ === "spawn") { const alive = enemies.filter(e => e.alive && e.spawned).length; for (let i = 0; i < Math.min(2, 4 - alive); i++) { const e = newEnemy("walker", cx + (i ? 20 : -30), boss.y + 10); e.spawned = true; e.vx = (i ? 1 : -1) * 1.2; e.vy = -4; enemies.push(e); } }
+  if (move_ === "charge") { boss.charge = 40; boss.vx = 0; }
 }
 function damageBoss() {
   if (!boss || boss.inv > 0 || boss.dead) return;
@@ -763,11 +791,17 @@ function updatePlay() {
     if (boss.active) {
       boss.t++; if (boss.inv > 0) boss.inv--;
       const rage = boss.hp <= 3 ? 1.5 : 1;
-      if (boss.ground && boss.t % 140 === 0) { boss.vy = -7; boss.vx = Math.sign(p.x - boss.x) * 2 * rage; }
+      const [move_, shout, kind] = BOSS_MOVES[ceo.id];
+      if (boss.charge > 0) { // wind up, then a full-speed run across the arena
+        boss.charge--; boss.vx = 0; if (boss.charge === 0) { boss.vx = Math.sign(p.x - boss.x) * 4.5 * rage; boss.dashing = 70; SFX.special(); }
+      } else if (boss.dashing > 0) {
+        boss.dashing--; if (frame % 3 === 0) parts.push({ x: boss.x + (boss.vx > 0 ? 0 : boss.w), y: boss.y + boss.h - 6, vx: -boss.vx * 0.2, vy: -0.5, life: 25, col: "#606068" });
+      } else if (boss.ground && boss.t % 140 === 0) { boss.vy = -7; boss.vx = Math.sign(p.x - boss.x) * 2 * rage; boss.leapt = true; }
       else if (boss.ground) boss.vx = Math.sign(p.x + 5 - (boss.x + boss.w / 2)) * 0.9 * rage;
-      if (boss.t % 200 === 100) for (let i = 0; i < 3 + (rage > 1 ? 2 : 0); i++) eshots.push({ x: boss.x + 20, y: boss.y + 10, vx: (i - 2) * 1.2, vy: -5 - Math.random() * 2, w: 8, h: 8, life: 240, grav: true, arrow: true });
+      if (boss.t % 220 === 110) bossAttack(move_, shout, kind, rage);
       boss.vy = Math.min(8, boss.vy + 0.32);
-      const was = boss.ground; move(boss); if (!was && boss.ground) shake = 6;
+      const was = boss.ground; if (move(boss)) boss.dashing = 0;
+      if (!was && boss.ground) { shake = 6; if (move_ === "quake" && boss.leapt) bossAttack("waves", "", kind, rage); boss.leapt = false; }
       if (boss.x < boss.arena) boss.x = boss.arena;
       if (!p.dead && hits(p, boss)) {
         if (p.vy > 0.5 && p.y + p.h - boss.y < 14) { damageBoss(); p.vy = -7; }
@@ -786,7 +820,11 @@ function updatePlay() {
   }
   shots = shots.filter(s => s.life > 0);
   for (const s of eshots) {
+    if (s.delay > 0) { s.delay--; continue; }
     s.x += s.vx; if (s.grav) s.vy += 0.2; s.y += s.vy; s.life--;
+    if (s.wobble) s.x += Math.sin(s.life * 0.1) * 0.6;
+    if (s.bounce && s.vy > 0 && s.y + s.h >= FLOOR_Y) { s.y = FLOOR_Y - s.h; s.vy = -s.vy * 0.6; s.bounce--; }
+    if (s.x < cam - 40 || s.x > cam + W + 40) s.life = 0;
     if (!p.dead && hits(p, s) && p.ghost <= 0) { hurt(); s.life = 0; }
     if (s.y > ROWS * T) s.life = 0;
   }
@@ -799,6 +837,7 @@ function updatePlay() {
     SFX.ding(); Music.stop(); exitT = 1; p.vx = 0; p.x = L.exit.x + 7;
     const timeBonus = Math.floor(timer / 60) * 5000 * (1 + lvl);
     tally = { keys: keysGot, keyCount: L.keyCount, sig: sigGot, timeBonus };
+    tally.headline = wrap(headline(), 34);
     score += timeBonus;
   } else if (!open && hits(p, { x: L.exit.x - 4, y: L.exit.y, w: 32, h: 48 }) && frame % 60 === 0) {
     popText(L.exit.x - 40, L.exit.y - 12, boss && !boss.dead ? "BEAT THE BOSS!" : `NEED ${L.quota - keysGot} MORE ${LEVELS[lvl].key}`, "#ff6060");
@@ -962,12 +1001,21 @@ function drawWorld() {
     else ctx.drawImage(img, dx, dy);
   }
   if (boss && !boss.dead) {
-    const img = SPR.boss[Math.floor(boss.t / 12) % 2], bx = Math.round(boss.x - camX) - 6, by = Math.round(boss.y + boss.h - img.height + 2);
+    const img = SPR.boss[Math.floor(boss.t / 12) % 2], bx = Math.round(boss.x - camX) - 6 + (boss.charge > 0 ? (frame % 4 < 2 ? -2 : 2) : 0), by = Math.round(boss.y + boss.h - img.height + 2);
     if (!(boss.inv > 0 && boss.inv % 6 < 3)) {
       if (p.x > boss.x) ctx.drawImage(img, bx, by); else { ctx.save(); ctx.translate(bx + img.width, by); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0); ctx.restore(); }
     }
   }
-  for (const s of eshots) { const x = Math.round(s.x - camX); if (s.arrow) { ctx.fillStyle = "#ff2020"; ctx.fillRect(x + 2, s.y, 4, 5); ctx.fillRect(x, s.y + 4, 8, 2); ctx.fillRect(x + 2, s.y + 6, 4, 2); } else ctx.drawImage(SPR.paper, x - 1, Math.round(s.y) - 1); }
+  for (const s of eshots) {
+    if (s.delay > 0) continue;
+    const x = Math.round(s.x - camX), y = Math.round(s.y), R = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, w, h); };
+    if (s.kind === "arrow") { R(2, 0, 4, 5, "#ff2020"); R(0, 4, 8, 2, "#ff2020"); R(2, 6, 4, 2, "#ff2020"); R(3, 1, 1, 3, "#ff8080"); }
+    else if (s.kind === "snow") { R(3, 0, 2, 8, "#e8f4ff"); R(0, 3, 8, 2, "#e8f4ff"); R(1, 1, 2, 2, "#a0d0ff"); R(5, 5, 2, 2, "#a0d0ff"); R(5, 1, 2, 2, "#a0d0ff"); R(1, 5, 2, 2, "#a0d0ff"); }
+    else if (s.kind === "chip") { R(0, 0, 8, 8, "#202020"); R(1, 1, 6, 6, "#d02020"); R(3, 3, 2, 2, "#ffe060"); }
+    else if (s.kind === "parcel") { R(0, 0, 10, 10, "#0a0a14"); R(1, 1, 8, 8, "#c08848"); R(4, 1, 2, 8, "#3060c0"); R(1, 4, 8, 1, "#a06830"); }
+    else if (s.kind === "wave") { const h = 6 + (frame % 6 < 3 ? 2 : 0); R(0, 10 - h, 14, h, "#c0b080"); R(2, 10 - h - 2, 10, 2, "#e0d0a0"); R(0, 9, 14, 1, "#806040"); }
+    else ctx.drawImage(SPR.paper, x - 1, y - 1);
+  }
   for (const s of shots) { ctx.fillStyle = s.col; ctx.fillRect(s.x - camX, s.y, s.w, s.h); ctx.fillStyle = "#fff"; ctx.fillRect(s.x - camX + 2, s.y + 2, s.w - 4, s.h - 4); }
   drawPlayer(camX);
   for (const q of parts) { if (q.s) txt(q.s, q.x - camX, q.y, q.col); else { ctx.fillStyle = q.col; ctx.fillRect(q.x - camX, q.y, 2, 2); } }
@@ -1003,12 +1051,15 @@ function drawHUD() {
 function drawLogo(cx, cy, size) { if (logo.complete && logo.naturalWidth) { ctx.imageSmoothingEnabled = true; ctx.drawImage(logo, cx - size / 2, cy - size / 2, size, size); ctx.imageSmoothingEnabled = false; } }
 
 function titleScreen() {
+  if (st === 1) fetchBoard();
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 40; i++) { ctx.fillStyle = i % 2 ? "#300" : "#180000"; ctx.fillRect(0, i * 6 + ((st / 2) % 6), W, 3); }
-  drawLogo(W / 2, 92, 172);
+  const showBoard = board.length && st % 720 >= 420;
+  if (showBoard) { ctx.fillStyle = "#000c"; ctx.fillRect(30, 4, W - 60, 176); drawBoard(10, false); }
+  else drawLogo(W / 2, 92, 172);
   if (st % 60 < 40) txt("PRESS START", W / 2, 186, "#fff", 8, "center");
   txt("ENTER / SPACE / TAP", W / 2, 198, "#a08080", 8, "center");
-  if (best) txt("BEST " + money(best), W / 2, 212, "#ffe060", 8, "center");
+  if (best) txt("YOUR BEST " + money(best), W / 2, 212, "#ffe060", 8, "center");
   if (anyStart() && st > 10) { SFX.select(); Music.play("lift", 0, 100); setState("select"); }
 }
 
@@ -1078,17 +1129,114 @@ function genQuota(n) { return quotaCache[n] ?? (quotaCache[n] = genLevel(n).quot
 function clearScreen() {
   if (st === 1) Music.play("lift", 0, 96);
   drawWorld();
-  ctx.fillStyle = "#000c"; ctx.fillRect(30, 36, W - 60, 150);
-  txt(LEVELS[lvl].win, W / 2, 46, "#ffe060", 8, "center");
+  ctx.fillStyle = "#000e"; ctx.fillRect(30, 30, W - 60, 162);
+  // the morning paper
+  ctx.fillStyle = "#0a0a14"; ctx.fillRect(41, 35, W - 82, 58); ctx.fillStyle = "#efe8d4"; ctx.fillRect(42, 36, W - 84, 56);
+  ctx.font = `8px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#1a1a1a"; ctx.fillText("THE DAILY GRIND", W / 2, 40);
+  ctx.fillStyle = "#1a1a1a"; ctx.fillRect(48, 50, W - 96, 1); ctx.fillRect(48, 52, W - 96, 1);
+  ctx.fillStyle = "#8a1010"; tally.headline.forEach((line, i) => ctx.fillText(line, W / 2, 58 + i * 11));
+  txt(LEVELS[lvl].win, W / 2, 99, "#ffe060", 8, "center");
   const rows = [
     [`${LEVELS[lvl].key}`, `${tally.keys}/${tally.keyCount}`],
     [ceo.sig, `${tally.sig}/3`],
     ["TIME BONUS", money(tally.timeBonus)],
     ["COMPANY VALUE", money(score)],
   ];
-  rows.forEach((r, i) => { if (st > 20 + i * 15) { if (st === 21 + i * 15) SFX.coin(); txt(r[0], 50, 70 + i * 18, "#fff"); txt(r[1], W - 50, 70 + i * 18, i === 3 ? "#ffe060" : "#80ff80", 8, "right"); } });
-  if (st > 90 && st % 50 < 34) txt(lvl < 4 ? "PRESS START: GOING UP" : "PRESS START", W / 2, 166, "#fff", 8, "center");
+  rows.forEach((r, i) => { if (st > 20 + i * 15) { if (st === 21 + i * 15) SFX.coin(); txt(r[0], 50, 114 + i * 13, "#fff"); txt(r[1], W - 50, 114 + i * 13, i === 3 ? "#ffe060" : "#80ff80", 8, "right"); } });
+  if (st > 90 && st % 50 < 34) txt(lvl < 4 ? "PRESS START: GOING UP" : "PRESS START", W / 2, 172, "#fff", 8, "center");
   if (st > 90 && anyStart()) { if (lvl < 4) { lvl++; setState("intro"); } else { saveBest(); setState("win"); } }
+}
+
+function wrap(str, n) {
+  const out = [""]; for (const w of str.split(" ")) { if ((out[out.length - 1] + " " + w).trim().length > n) out.push(w); else out[out.length - 1] = (out[out.length - 1] + " " + w).trim(); }
+  return out.slice(0, 3);
+}
+const pick = a => a[Math.floor(Math.random() * a.length)];
+// Made-up tabloid headlines about the game, never quotes from the real people
+function headline() {
+  const S = ceo.name.split(" ").pop(), CO = ceo.co.split(" / ")[0], K = LEVELS[lvl].key, R = lvl === 4 ? RIV.boss[0] : RIV[NEW_RIVAL[lvl]][0], room = LEVELS[lvl].name;
+  if (lvl === 4) return pick([`${S} FLATTENS ${R}! ${CO} NOW WORTH ${money(score)}`, `${R} DEFEATED. BOARD "QUITE PLEASED"`, `${R} FILES FOR BANKRUPTCY AFTER ${S} JUMPS ON HEAD`]);
+  const list = [
+    `${S} BAGS ${tally.keys} ${K}. RIVALS "DEVASTATED"`,
+    `${R} STOMPED IN ${room} SHOCKER`,
+    `${S} JUMPS ON DESK. ${CO} SHARES UP ${3 + Math.floor(Math.random() * 40)}%`,
+    `OFFICE PLANT "TERRIFIED" AS ${S} SPRINTS PAST`,
+    `${S} TAKES LIFT, REFUSES ALL SMALL TALK`,
+    `WATER COOLER GOSSIP: ${S} "VERY BOUNCY"`,
+    `${S} SKIPS MEETING TO HEADBUTT FURNITURE`,
+  ];
+  if (stomps > 1) list.push(`${stomps} RIVALS FLATTENED. HR "LOOKING INTO IT"`);
+  if (tally.sig) list.push(`${S} FINDS ${tally.sig} ${ceo.sig}. NOBODY KNOWS WHY`);
+  if (tally.sig === 0) list.push(`WHERE ARE THE ${ceo.sig}? ${S} "NOT SURE"`);
+  return pick(list);
+}
+
+let board = [], boardOk = false, initials = "", icur = 0, myRank = 0, reached = 1;
+function fetchBoard() { fetch("/api/scores").then(r => r.json()).then(d => { board = d.top || []; boardOk = true; }).catch(() => { boardOk = false; }); }
+fetchBoard();
+const qualifies = v => boardOk && v > 0 && (board.length < 10 || v > board[board.length - 1].score);
+const CELLS = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", "DEL", "END"];
+const BLOCKED = new Set(["ASS", "FUK", "FUC", "FCK", "FUQ", "CUM", "CNT", "KNT", "TIT", "SEX", "DIK", "DIC", "COK", "KOK", "KKK", "NIG", "NGR", "FAG", "GAY", "JEW", "PIS", "POO", "WTF", "STD", "VAG", "XXX", "NAZ", "HTL", "RAP", "SHT", "SHI", "BUM", "PRK", "WNK", "WNG", "TWT", "SUK", "SUC", "GOD", "DIE", "KYS"]);
+function endGame() {
+  saveBest();
+  if (qualifies(score)) { initials = ""; icur = 0; Music.play("muzak", 0, 112); setState("initials"); }
+  else { Music.play("lift", 0, 100); setState("title"); }
+}
+function typeLetter(ch) { if (initials.length < 3) { initials += ch; SFX.select(); } }
+function submitInitials() {
+  if (initials.length < 3) return;
+  if (BLOCKED.has(initials)) { initials = ""; SFX.hurt(); return; }
+  SFX.ding();
+  fetch("/api/scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: initials, score, ceo: ceo.id, floor: reached }) })
+    .then(r => r.json()).then(d => { if (d.top) { board = d.top; myRank = d.rank; } }).catch(() => {});
+  myRank = -1; setState("board");
+}
+function initialsScreen() {
+  ctx.fillStyle = "#100828"; ctx.fillRect(0, 0, W, H);
+  txt("NEW HIGH SCORE!", W / 2, 10, st % 20 < 10 ? "#ffe060" : "#ff4040", 16, "center");
+  txt(money(score), W / 2, 32, "#fff", 8, "center");
+  txt("ENTER YOUR INITIALS", W / 2, 46, "#a0a0c0", 8, "center");
+  for (let i = 0; i < 3; i++) { const x = W / 2 - 36 + i * 24; ctx.fillStyle = "#000"; ctx.fillRect(x, 60, 20, 24); txt(initials[i] || (i === initials.length && st % 30 < 15 ? "_" : ""), x + 3, 64, "#ffe060", 16); }
+  const cols = 7, gx = W / 2 - cols * 28 / 2, gy = 98;
+  if (pressed.left) { icur = (icur + CELLS.length - 1) % CELLS.length; SFX.select(); }
+  if (pressed.right) { icur = (icur + 1) % CELLS.length; SFX.select(); }
+  if (pressed.up) { icur = (icur + CELLS.length - cols) % CELLS.length; SFX.select(); }
+  if (pressed.down) { icur = (icur + cols) % CELLS.length; SFX.select(); }
+  let chosen = null;
+  if (tap) CELLS.forEach((c, i) => { const x = gx + (i % cols) * 28, y = gy + Math.floor(i / cols) * 22; if (tap.x >= x && tap.x < x + 28 && tap.y >= y && tap.y < y + 22) { icur = i; chosen = c; } });
+  if (pressed.jump) chosen = CELLS[icur];
+  if (pressed.special) chosen = "DEL";
+  if (pressed.start) chosen = initials.length === 3 ? "END" : CELLS[icur];
+  CELLS.forEach((c, i) => {
+    const x = gx + (i % cols) * 28, y = gy + Math.floor(i / cols) * 22;
+    if (i === icur) { ctx.fillStyle = "#802020"; ctx.fillRect(x, y, 26, 20); }
+    txt(c, x + 13, y + 6, c === "END" ? "#80ff80" : c === "DEL" ? "#ff8080" : "#fff", 8, "center");
+  });
+  txt("ARROWS + A, OR TYPE. B DELETES", W / 2, 196, "#606090", 8, "center");
+  txt("NO REAL NAMES, PLEASE", W / 2, 208, "#606090", 8, "center");
+  if (chosen === "DEL") { initials = initials.slice(0, -1); SFX.block(); }
+  else if (chosen === "END") submitInitials();
+  else if (chosen) typeLetter(chosen);
+}
+function drawBoard(y0, highlight) {
+  txt("TOP 10 CEOS", W / 2, y0, "#ffe060", 16, "center");
+  if (!board.length) { txt(boardOk ? "NO SCORES YET. BE THE FIRST!" : "BOARD OFFLINE", W / 2, y0 + 40, "#a0a0c0", 8, "center"); return; }
+  board.forEach((e, i) => {
+    const y = y0 + 24 + i * 14, me = highlight && i + 1 === myRank, col = me ? (st % 20 < 10 ? "#ffe060" : "#ff4040") : i === 0 ? "#ffe060" : "#fff";
+    const c = CEOS.find(c => c.id === e.ceo);
+    txt(`${String(i + 1).padStart(2, " ")}.`, 60, y, col);
+    txt(e.name, 96, y, col);
+    if (c) ctx.drawImage(c.portrait, 134, y - 4, 15, 15);
+    txt(c ? c.name.split(" ").pop() : "", 154, y, "#a0a0c0");
+    txt(e.floor === 6 ? "WIN" : `FL${e.floor}`, 232, y, e.floor === 6 ? "#80ff80" : "#808090");
+    txt(money(e.score), W - 50, y, col, 8, "right");
+  });
+}
+function boardScreen() {
+  ctx.fillStyle = "#100828"; ctx.fillRect(0, 0, W, H);
+  drawBoard(8, true);
+  if (st > 60 && st % 50 < 34) txt("PRESS START", W / 2, 210, "#fff", 8, "center");
+  if ((st > 60 && anyStart()) || st > 600) { Music.play("lift", 0, 100); setState("title"); }
 }
 
 function saveBest() { if (score > best) { best = score; try { localStorage.setItem("ck_best", best); } catch {} } }
@@ -1111,7 +1259,7 @@ function winScreen() {
   const [r, col] = rankFor(score); txt(r, W / 2, 172, col, 8, "center");
   if (continues) txt(`CONTINUES USED: ${continues}`, W / 2, 186, "#a0a0a0", 8, "center");
   if (st > 120 && st % 50 < 34) txt("PRESS START", W / 2, 204, "#fff", 8, "center");
-  if (st > 120 && anyStart()) { Music.play("lift", 0, 100); setState("title"); }
+  if (st > 120 && anyStart()) { reached = 6; endGame(); } // 6 = beat the game
 }
 
 function gameOverScreen() {
@@ -1124,7 +1272,8 @@ function gameOverScreen() {
   txt(String(Math.max(0, left)), W / 2, 150, "#ffe060", 16, "center");
   txt("PRESS START", W / 2, 180, "#a0a0a0", 8, "center");
   if (anyStart() && st > 20) { continues++; lives = 3; score = levelStartScore; setState("intro"); return; }
-  if (left < 0) { saveBest(); Music.play("lift", 0, 100); setState("title"); }
+  if (left < 0 || (pressed.special && st > 20)) { reached = lvl + 1; endGame(); return; }
+  txt("B / X: GIVE UP", W / 2, 194, "#606070", 8, "center");
 }
 
 // ---------- main loop ----------
@@ -1141,6 +1290,8 @@ function loop(now) {
     else if (state === "clear") clearScreen();
     else if (state === "win") winScreen();
     else if (state === "gameover") gameOverScreen();
+    else if (state === "initials") initialsScreen();
+    else if (state === "board") boardScreen();
     for (const k in pressed) delete pressed[k];
     tap = null;
   }
