@@ -1,10 +1,12 @@
 # Corporate Kombat
 
-Retro side-scroller. Pick one of 8 CEOs, then fight through 5 stages of the corporate jungle: The Garage, Office Park, The Factory, Wall Street and Global HQ (boss: The Market Crash). Each stage gets harder: more and nastier enemies, wider gaps, spikes, lawyers throwing briefcases, a higher quota and a boss.
+Retro side-scroller. Pick one of 8 CEOs, then fight up 5 floors of the corporate jungle: Start-up Loft, Open-Plan Office, The Warehouse, The Trading Floor and The Boardroom. Each floor gets harder: new rivals, wider lift shafts, spilled drawing pins, people throwing paperwork, a higher quota and a final boss.
 
-Collect the stage's key item (Big Ideas, New Hires, Products, Investors, Customers) to open the exit. Grab £ coins, hit gold deal blocks for power-ups (coffee, cash flow, golden parachute) and find your CEO's 3 signature items for a big bonus. Score is your company value.
+Every CEO has their own rivals and arch-rival boss (Musk faces Recall Notices, Short Sellers and The Big Short; Bezos faces Rogue Drones and the Peak Season Megabot; Dyson faces Dust Bunnies and the Mega Dust Bunny, and so on). They live in `RIVALS` in `public/game.js`.
 
-Controls: arrows/WASD move, Z/Space jump, X super move, M mute. On phones and tablets, on-screen buttons appear. Best score is saved on each device.
+Collect the floor's key item (Big Ideas, New Hires, Products, Investors, Customers) to unlock the lift. Grab £ coins, hit gold deal blocks for power-ups (coffee, cash flow, golden parachute) and find your CEO's 3 signature items for a big bonus. Score is your company value.
+
+Original 8-bit lift-music bossa plays throughout, switching to a driving track for the boss. Controls: arrows/WASD move, Z/Space jump, X super move, M or the ♪ button to mute. On phones and tablets, on-screen buttons appear. Best score is saved on each device.
 
 The CEOs are parody caricatures of public figures. Not endorsed by anyone named.
 
