@@ -470,7 +470,7 @@ function genLevel(n) {
       surf = Math.max(7, Math.min(11, surf + (R() < 0.5 ? -1 : 1) * ri(1, 2)));
       const len = ri(4, 7); ground(x, len, surf); coinRow(x + 1, len - 2, surf - 2); if (R() < 0.4 + n * 0.1) addEnemy(x + len - 2, surf); x += len;
     } else if (roll < 0.52) { // row of furniture with deal blocks
-      const len = ri(8, 11); ground(x, len, surf); const by = surf - 4;
+      const len = ri(8, 11); ground(x, len, surf); const by = surf - 3;
       for (let i = 2; i < 7; i++) set(x + i, by, (i === 3 || i === 5) ? 3 : 2);
       coinRow(x + 2, 5, by - 1); if (R() < 0.6) key(x + 4, by - 2); else sigSpots.push([x + 4, by - 3]);
       if (R() < 0.5 + n * 0.12) addEnemy(x + len - 2, surf); x += len;
@@ -487,7 +487,7 @@ function genLevel(n) {
     } else if (roll < 0.78 && n >= 1) { // spilled drawing pins
       const len = ri(9, 12); ground(x, len, surf);
       let i = 2; while (i < len - 2) { const sw = ri(1, Math.min(3, 1 + n)); for (let k = 0; k < sw; k++) set(x + i + k, surf - 1, 5); items.push({ t: "coin", x: (x + i) * T + 2, y: (surf - 4) * T }); i += sw + ri(2, 3); }
-      sigSpots.push([x + Math.floor(len / 2), surf - 6]); x += len;
+      sigSpots.push([x + Math.floor(len / 2), surf - 3]); x += len;
     } else if (roll < 0.86 && n >= 3) { // thrower on a ledge
       const len = ri(7, 9); ground(x, len, surf); for (let i = 0; i < 3; i++) set(x + len - 3 + i, surf - 3, 2);
       enemies.push({ t: "thrower", x: (x + len - 2) * T, y: (surf - 3) * T - 24 }); key(x + 2, surf - 3); x += len;
@@ -506,7 +506,8 @@ function genLevel(n) {
   else coinRow(x + 3, 6, surf - 3);
   const exit = { x: (cols - 5) * T, y: (surf - 3) * T };
   for (let i = 0; i < 3; i++) {
-    const s = sigSpots.length ? sigSpots.splice(Math.floor(R() * sigSpots.length), 1)[0] : [Math.floor(cols * (i + 1) / 4), 3];
+    let s = sigSpots.length ? sigSpots.splice(Math.floor(R() * sigSpots.length), 1)[0] : null;
+    if (!s) { const cx = Math.floor(cols * (i + 1) / 4); let top = 0; while (top < ROWS && !map[top * cols + cx]) top++; s = [cx, Math.min(top, 11) - 3]; }
     items.push({ t: "sig", x: s[0] * T + 1, y: s[1] * T });
   }
   const keyCount = items.filter(i => i.t === "key").length;
@@ -680,7 +681,7 @@ function updatePlay() {
   }
   if (pressed.jump || pressed.up) p.jbuf = 7; else if (p.jbuf > 0) p.jbuf--;
   if (p.ground) p.coyote = 6; else if (p.coyote > 0) p.coyote--;
-  if (p.jbuf > 0 && p.coyote > 0) { p.vy = -6.3 * ceo.jump; p.jbuf = 0; p.coyote = 0; SFX.jump(); }
+  if (p.jbuf > 0 && p.coyote > 0) { p.vy = -6.6 * ceo.jump; p.jbuf = 0; p.coyote = 0; SFX.jump(); }
   if (!(keys.jump || keys.up) && p.vy < -2.5 && p.rocket <= 0) p.vy = -2.5;
   if (pressed.special) useSpecial();
   p.vy = Math.min(7, p.vy + (p.rocket > 0 ? 0.18 : 0.32));
