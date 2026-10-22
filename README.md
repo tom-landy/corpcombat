@@ -6,13 +6,19 @@ Every CEO has their own rivals and arch-rival boss (Musk faces Recall Notices, S
 
 Collect the floor's key item (Big Ideas, New Hires, Products, Investors, Customers) to unlock the lift. Grab £ coins, hit gold deal blocks for power-ups (coffee, cash flow, golden parachute) and find your CEO's 3 signature items for a big bonus. Score is your company value.
 
-Original 8-bit lift-music bossa plays throughout, switching to a driving track for the boss. Each arch-rival boss has its own signature attack: The Big Short rains sell orders, The AI Winter drops snowflakes, the Troll King sends patent quakes along the floor, the Mega Dust Bunny spawns more dust bunnies, King Gas Guzzler charges, and so on (`BOSS_MOVES` in `public/game.js`). Between floors, The Daily Grind prints a made-up headline about your run.
+Original 8-bit fighting-game music plays throughout (a different minor-key track per floor, faster as you climb), switching to a boss track for the arch-rival. Each arch-rival boss has its own signature attack: The Big Short rains sell orders, The AI Winter drops snowflakes, the Troll King sends patent quakes along the floor, the Mega Dust Bunny spawns more dust bunnies, King Gas Guzzler charges, and so on (`BOSS_MOVES` in `public/game.js`). Between floors, The Daily Grind prints a made-up headline about your run.
 
 Controls: arrows/WASD move, Z/Space jump, X super move, M or the ♪ button to mute. On phones and tablets, on-screen buttons appear. There's a shared top-10 board with 3-letter arcade initials, shown on the title screen between logo loops. Rude three-letter combos are blocked in the game and on the server.
 
 The CEOs are parody caricatures of public figures. Not endorsed by anyone named.
 
 Plain HTML and JavaScript, everything drawn in code, plus a small Node server with no dependencies.
+
+## Secret: CEO Kombat
+
+On the CEO select screen, click or tap the faint logo in the top-right corner. That opens a one-on-one fighting mode: pick a fighter, then fight up a ladder of 3 rival CEOs, best of 3 rounds each. Win the final round and you get "FINISH THEM!": get close and press special for a (bloodless, corporate) finisher, either a Buyoutality or a Firedality. Hits spray cash, not blood.
+
+Controls: arrows move, Up jumps, holding away from your opponent blocks, Z punch, X kick, C special move. Touch screens get extra ▲ and C buttons. Esc quits. The code is in `public/kombat.js`.
 
 ## High score board
 

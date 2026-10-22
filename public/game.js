@@ -20,10 +20,10 @@ function fit() {
 addEventListener("resize", fit);
 
 // ---------- input ----------
-const keys = { left: false, right: false, up: false, down: false, jump: false, special: false };
+const keys = { left: false, right: false, up: false, down: false, jump: false, special: false, super: false };
 const pressed = {}; // edge-triggered this frame
 const KEYMAP = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down",
-  Space: "jump", KeyZ: "jump", KeyK: "jump", KeyX: "special", KeyJ: "special", ShiftLeft: "special", Enter: "start" };
+  Space: "jump", KeyZ: "jump", KeyK: "jump", KeyX: "special", KeyJ: "special", ShiftLeft: "special", Enter: "start", KeyC: "super", KeyL: "super" };
 addEventListener("keydown", e => {
   audioInit();
   if (state === "initials" && /^[a-z]$/i.test(e.key)) { e.preventDefault(); typeLetter(e.key.toUpperCase()); return; }
@@ -124,30 +124,36 @@ const SFX = {
   gameover: () => sfx(t => [392, 370, 349, 330].forEach((f, i) => tone("triangle", f, t + i * 0.35, 0.4 + (i === 3) * 0.8, 0.12, sfxBus))),
 };
 
-// ---------- music: original 8-bit lift-lounge bossa, and a boss track ----------
-// A bar is [bassRoot, chord] or [root, chord, root2, chord2] for a change halfway.
+// ---------- music: original 8-bit fighting-game tracks ----------
+// A bar is [bassRoot, chord] or [root, chord, root2, chord2] for a change halfway. Melodies are 8th notes.
 const CH = { M7: [0, 4, 7, 11], m7: [0, 3, 7, 10], d7: [0, 4, 7, 10], m6: [0, 3, 7, 9], m: [0, 3, 7], M: [0, 4, 7], hd: [0, 3, 6, 10] };
 const _ = -1; // hold
 const SONGS = {
-  lift: {
-    bpm: 104, style: "bossa",
-    prog: [[41, "M7"], [43, "m7", 48, "d7"], [41, "M7"], [46, "M7", 46, "m6"], [45, "m7", 50, "d7"], [43, "m7", 48, "d7"], [41, "M7", 50, "d7"], [43, "m7", 48, "d7"]],
-    mel: [69, _, _, 67, 69, _, 72, _, 70, _, 69, _, 67, _, 64, _, 65, _, _, _, 69, _, 72, _, 74, _, _, 72, 70, _, _, 0,
-      72, _, 69, 72, _, 74, _, 72, 70, _, _, 67, _, 64, _, 62, 65, _, 69, _, 72, _, 66, _, 67, _, _, _, 0, 0, 0, 0],
+  title: { // E minor, heroic: title, select and results screens
+    bpm: 128,
+    prog: [[40, "m"], [48, "M"], [50, "M"], [47, "d7"]],
+    mel: [76, _, _, 79, _, _, 83, _, 84, _, 83, _, 79, _, 76, _, 78, _, _, 81, _, _, 86, _, 83, _, _, _, 75, _, 78, _,
+      88, _, 86, _, 83, _, 79, _, 84, _, 83, _, 79, _, 84, _, 86, _, 83, _, 81, _, 78, _, 83, _, _, _, 0, 0, 75, 78],
   },
-  muzak: { // second lift tune for the middle floors
-    bpm: 112, style: "bossa",
-    prog: [[48, "M7"], [45, "m7"], [50, "m7"], [43, "d7"], [52, "m7"], [45, "d7"], [50, "m7"], [43, "d7"]],
-    mel: [76, _, 74, 72, _, 67, _, _, 69, _, 72, _, 76, _, _, 0, 77, _, 76, 74, _, 72, _, 69, 71, _, _, _, 67, _, _, 0,
-      76, _, 79, _, 77, 76, _, 74, 73, _, _, 76, _, _, 69, _, 74, _, 72, _, 69, _, 65, _, 67, _, _, _, 71, _, 74, _],
+  fight1: { // A minor
+    bpm: 132,
+    prog: [[45, "m"], [41, "M"], [43, "M"], [40, "M"]],
+    mel: [69, _, 72, _, 76, _, 74, 72, 77, _, 76, _, 74, _, 72, _, 74, _, 71, _, 67, _, 71, 74, 76, _, _, _, 68, _, 71, _,
+      81, _, 79, _, 76, _, 72, _, 77, _, 76, 77, _, 72, _, 69, 71, _, 74, _, 79, _, 77, 74, 76, _, _, _, 0, 0, 80, _],
+  },
+  fight2: { // D minor
+    bpm: 138,
+    prog: [[50, "m"], [46, "M"], [48, "M"], [45, "M"]],
+    mel: [74, 0, 74, 77, _, 81, _, 79, 77, _, 74, _, 70, _, 74, _, 76, 0, 76, 79, _, 84, _, 79, 76, _, 73, _, 69, _, 73, 76,
+      81, _, _, 79, 77, _, 76, _, 74, _, 77, _, 82, _, 81, _, 79, _, 76, _, 72, _, 76, 79, 81, _, _, _, 73, _, 76, _],
   },
   tense: {
-    bpm: 124, style: "drive",
+    bpm: 124,
     prog: [[50, "m"], [46, "M"], [48, "M"], [45, "d7"]],
     mel: [74, _, 77, _, 81, _, 79, 77, 77, _, 74, _, 70, _, 0, 0, 76, _, 72, _, 79, _, 76, 72, 73, _, 76, _, 79, _, 81, _],
   },
   boss: {
-    bpm: 152, style: "drive",
+    bpm: 152,
     prog: [[45, "m"], [45, "m"], [41, "M"], [43, "M", 40, "d7"]],
     mel: [81, 0, 81, 0, 84, _, 81, 0, 79, _, 77, _, 76, _, 72, _, 77, 0, 77, 0, 81, _, 77, 0, 79, _, 76, _, 80, _, 83, _],
   },
@@ -170,29 +176,23 @@ const Music = {
     const s = this.song, pos = step % 8, bar = s.prog[Math.floor(step / 8) % s.prog.length], tr = this.transpose;
     const half = pos >= 4 && bar.length > 2 ? 2 : 0, root = bar[half] + tr, chord = CH[bar[half + 1]];
     const B = musicBus;
-    if (s.style === "bossa") {
-      // bossa bass: root, fifth on the and-of-2, root, fifth on the and-of-4
-      if (pos === 0 || pos === 4) { tone("triangle", NOTE(root + 12), t, e * 2.6, 0.22, B); tone("square", NOTE(root + 12), t, e * 1.2, 0.025, B); }
-      if (pos === 3 || pos === 7) { tone("triangle", NOTE(root + 19), t, e * 0.9, 0.18, B); tone("square", NOTE(root + 19), t, e * 0.6, 0.02, B); }
-      // soft electric-piano comp on the off-beats
-      if ([2, 5, 7].includes(pos) && !(pos === 7 && step % 16 < 8)) for (const n of chord) tone("triangle", NOTE(root + 12 + n), t, e * 1.4, 0.035, B);
-      // brush and rim click
-      noise(t, 0.03, pos % 2 ? 0.05 : 0.025, 7000, B);
-      if (pos === 3 || pos === 6) tone("square", 1800, t, 0.015, 0.02, B);
-    } else {
-      tone("square", NOTE(root + (pos % 2 ? 12 : 0)), t, e * 0.8, 0.045, B);
-      tone("triangle", NOTE(root + 12), t, e * 0.9, 0.12, B);
-      if (pos % 2 === 0) noise(t, 0.04, 0.06, 6000, B);
-      if (pos === 0 || pos === 4) noise(t, 0.12, 0.25, 180, B, "lowpass");
-      if (pos === 2 || pos === 6) noise(t, 0.08, 0.12, 2000, B, "bandpass");
-      if (pos % 4 === 1) for (const n of chord) tone("square", NOTE(root + 24 + n), t, e * 0.5, 0.012, B);
-    }
+    // pumping octave bass
+    tone("square", NOTE(root + (pos % 2 ? 12 : 0)), t, e * 0.8, 0.05, B);
+    tone("triangle", NOTE(root + 12), t, e * 0.9, 0.14, B);
+    // power-chord stabs on the pushes
+    if (pos === 0 || pos === 3 || (pos === 6 && step % 16 >= 8)) for (const n of [12, 19, 24]) tone("sawtooth", NOTE(root + n), t, e * 0.7, 0.018, B);
+    // drums: kick, snare on the backbeat, hats on every 8th
+    if (pos === 0 || pos === 4 || (pos === 5 && step % 16 >= 8)) { tone("sine", 150, t, 0.12, 0.35, B, 45); noise(t, 0.05, 0.15, 300, B, "lowpass"); }
+    if (pos === 2 || pos === 6) { noise(t, 0.12, 0.3, 1800, B, "bandpass"); tone("triangle", 190, t, 0.06, 0.08, B, 120); }
+    noise(t, pos === 7 ? 0.12 : 0.03, pos % 2 ? 0.06 : 0.035, 7000, B);
+    // chip arpeggio underneath
+    tone("square", NOTE(root + 24 + chord[pos % chord.length]), t, e * 0.4, 0.012, B);
     const mel = s.mel, i = step % mel.length, m = mel[i];
     if (m > 0) {
       let len = 1; while (mel[(i + len) % mel.length] === _ && len < 8) len++;
-      const lead = s.style === "bossa" ? "square" : "sawtooth";
-      tone(lead, NOTE(m + tr), t, e * len * 0.92, s.style === "bossa" ? 0.05 : 0.04, B);
-      if (s.style === "bossa") tone("sine", NOTE(m + tr + 12), t, e * len * 0.7, 0.012, B); // vibraphone shimmer
+      // doubled lead, a square and a slightly detuned saw, for that arcade bite
+      tone("square", NOTE(m + tr), t, e * len * 0.92, 0.04, B);
+      tone("sawtooth", NOTE(m + tr) * 1.004, t, e * len * 0.85, 0.02, B);
     }
   },
 };
@@ -452,19 +452,19 @@ function sigSprite(c) {
 const LEVELS = [
   { name: "START-UP LOFT", round: "SEED ROUND", key: "BIG IDEAS", time: 200, win: "SEED ROUND CLOSED!",
     wall: "#7a4034", wall2: "#62302a", pattern: "brick", sky: ["#f08848", "#ffc080"], night: false, carpet: "#a87040", ground: "#3e2e28", plat: "desk",
-    furn: ["whiteboard", "beanbag", "plant", "desk", "plant", "arcade"], furnCol: "#4a2420", ceil: "#2a2422", vine: "#3a9a40", song: ["lift", 0, 100] },
+    furn: ["whiteboard", "beanbag", "plant", "desk", "plant", "arcade"], furnCol: "#4a2420", ceil: "#2a2422", vine: "#3a9a40", song: ["fight1", 0, 132] },
   { name: "OPEN-PLAN OFFICE", round: "SERIES A", key: "NEW HIRES", time: 200, win: "SERIES A RAISED!",
     wall: "#cfc6ac", wall2: "#bab296", pattern: "panel", sky: ["#4a90d8", "#a8d8f0"], night: false, carpet: "#4a5a7a", ground: "#2e2e38", plat: "cabinet",
-    furn: ["cubicle", "plant", "cooler", "cubicle", "printer", "clock"], furnCol: "#a29a80", ceil: "#e8e6dc", vine: "#40a048", song: ["muzak", 0, 108] },
+    furn: ["cubicle", "plant", "cooler", "cubicle", "printer", "clock"], furnCol: "#a29a80", ceil: "#e8e6dc", vine: "#40a048", song: ["fight2", 0, 136] },
   { name: "THE WAREHOUSE", round: "SCALE-UP", key: "PRODUCTS", time: 220, win: "WAREHOUSE AT FULL TILT!",
     wall: "#5a6068", wall2: "#4c525a", pattern: "corrugated", sky: ["#8a8478", "#c0b0a0"], night: false, carpet: "#c8a028", ground: "#38383c", plat: "crate",
-    furn: ["rack", "boxes", "rack", "forklift", "conveyor"], furnCol: "#3a4048", ceil: "#2a2e32", vine: "#4a8a3a", song: ["muzak", -2, 116] },
+    furn: ["rack", "boxes", "rack", "forklift", "conveyor"], furnCol: "#3a4048", ceil: "#2a2e32", vine: "#4a8a3a", song: ["fight1", 3, 142] },
   { name: "THE TRADING FLOOR", round: "THE IPO", key: "INVESTORS", time: 220, win: "IPO! THE BELL RINGS!",
     wall: "#161c34", wall2: "#1c2442", pattern: "grid", sky: ["#050818", "#1a2050"], night: true, carpet: "#5a1a2a", ground: "#1a1a22", plat: "desk",
-    furn: ["screens", "desk", "screens", "cooler", "plant"], furnCol: "#0c1020", ceil: "#0a0c18", vine: "#2a7a3a", song: ["lift", 3, 122] },
+    furn: ["screens", "desk", "screens", "cooler", "plant"], furnCol: "#0c1020", ceil: "#0a0c18", vine: "#2a7a3a", song: ["fight2", 4, 148] },
   { name: "THE BOARDROOM", round: "HOSTILE TAKEOVER", key: "CUSTOMERS", time: 260, win: "TAKEOVER DEFEATED!",
     wall: "#4a2418", wall2: "#3c1c12", pattern: "wood", sky: ["#200810", "#802020"], night: true, carpet: "#8a1a1a", ground: "#22140e", plat: "desk",
-    furn: ["painting", "chair", "plant", "globe", "chair", "clock"], furnCol: "#2a120a", ceil: "#1a0c08", vine: "#2a6a30", song: ["tense", 0, 124] },
+    furn: ["painting", "chair", "plant", "globe", "chair", "clock"], furnCol: "#2a120a", ceil: "#1a0c08", vine: "#2a6a30", song: ["tense", 0, 132] },
 ];
 
 function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
@@ -682,7 +682,7 @@ function bossAttack(move_, shout, kind, rage) {
 function damageBoss() {
   if (!boss || boss.inv > 0 || boss.dead) return;
   boss.hp--; boss.inv = 70; shake = 10; SFX.stomp(); burst(boss.x + 22, boss.y + 10, "#ff2020", 16, 3);
-  if (boss.hp <= 0) { boss.dead = true; addScore(1000000, boss.x, boss.y); SFX.clear(); burst(boss.x + 22, boss.y + 20, "#ffe060", 40, 4); Music.play("lift", 5, 120); }
+  if (boss.hp <= 0) { boss.dead = true; addScore(1000000, boss.x, boss.y); SFX.clear(); burst(boss.x + 22, boss.y + 20, "#ffe060", 40, 4); Music.play("title", 0, 140); }
 }
 
 function collect(it) {
@@ -1060,7 +1060,7 @@ function titleScreen() {
   if (st % 60 < 40) txt("PRESS START", W / 2, 186, "#fff", 8, "center");
   txt("ENTER / SPACE / TAP", W / 2, 198, "#a08080", 8, "center");
   if (best) txt("YOUR BEST " + money(best), W / 2, 212, "#ffe060", 8, "center");
-  if (anyStart() && st > 10) { SFX.select(); Music.play("lift", 0, 100); setState("select"); }
+  if (anyStart() && st > 10) { SFX.select(); Music.play("title", 0, 128); setState("select"); }
 }
 
 function selectScreen() {
@@ -1071,6 +1071,9 @@ function selectScreen() {
   if (pressed.right) { sel = (sel + 1) % 8; SFX.select(); }
   if (pressed.up || pressed.down) { sel = (sel + 4) % 8; SFX.select(); }
   const gx = 170, gy = 34, cw = 52, ch = 52;
+  // secret: the faint logo in the corner opens CEO Kombat
+  ctx.globalAlpha = 0.3 + Math.sin(st / 12) * 0.12; drawLogo(368, 15, 24); ctx.globalAlpha = 1;
+  if (tap && tap.x > 352 && tap.y < 30) { window.enterKombat(); return; }
   if (tap) {
     for (let i = 0; i < 8; i++) { const x = gx + (i % 4) * cw, y = gy + Math.floor(i / 4) * ch; if (tap.x >= x && tap.x < x + cw && tap.y >= y && tap.y < y + ch) { if (sel === i) pressed.start = true; else { sel = i; SFX.select(); } } }
     if (tap.y > 140 && tap.x > 160) pressed.start = true;
@@ -1127,7 +1130,7 @@ const quotaCache = {};
 function genQuota(n) { return quotaCache[n] ?? (quotaCache[n] = genLevel(n).quota); }
 
 function clearScreen() {
-  if (st === 1) Music.play("lift", 0, 96);
+  if (st === 1) Music.play("title", 0, 120);
   drawWorld();
   ctx.fillStyle = "#000e"; ctx.fillRect(30, 30, W - 60, 162);
   // the morning paper
@@ -1179,8 +1182,8 @@ const CELLS = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", "DEL", "END"];
 const BLOCKED = new Set(["ASS", "FUK", "FUC", "FCK", "FUQ", "CUM", "CNT", "KNT", "TIT", "SEX", "DIK", "DIC", "COK", "KOK", "KKK", "NIG", "NGR", "FAG", "GAY", "JEW", "PIS", "POO", "WTF", "STD", "VAG", "XXX", "NAZ", "HTL", "RAP", "SHT", "SHI", "BUM", "PRK", "WNK", "WNG", "TWT", "SUK", "SUC", "GOD", "DIE", "KYS"]);
 function endGame() {
   saveBest();
-  if (qualifies(score)) { initials = ""; icur = 0; Music.play("muzak", 0, 112); setState("initials"); }
-  else { Music.play("lift", 0, 100); setState("title"); }
+  if (qualifies(score)) { initials = ""; icur = 0; Music.play("title", 0, 128); setState("initials"); }
+  else { Music.play("title", 0, 128); setState("title"); }
 }
 function typeLetter(ch) { if (initials.length < 3) { initials += ch; SFX.select(); } }
 function submitInitials() {
@@ -1236,7 +1239,7 @@ function boardScreen() {
   ctx.fillStyle = "#100828"; ctx.fillRect(0, 0, W, H);
   drawBoard(8, true);
   if (st > 60 && st % 50 < 34) txt("PRESS START", W / 2, 210, "#fff", 8, "center");
-  if ((st > 60 && anyStart()) || st > 600) { Music.play("lift", 0, 100); setState("title"); }
+  if ((st > 60 && anyStart()) || st > 600) { Music.play("title", 0, 128); setState("title"); }
 }
 
 function saveBest() { if (score > best) { best = score; try { localStorage.setItem("ck_best", best); } catch {} } }
@@ -1248,7 +1251,7 @@ function rankFor(v) {
   return ["SOLID SCALE-UP", "#80ff80"];
 }
 function winScreen() {
-  if (st === 1) Music.play("muzak", 5, 128);
+  if (st === 1) Music.play("title", 0, 144);
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 30; i++) { ctx.fillStyle = ["#ffe060", "#ff4040", "#40c0ff", "#40ff80"][i % 4]; ctx.fillRect((i * 53 + st * (1 + i % 3)) % W, (i * 37 + st * 2) % H, 3, 3); }
   ctx.drawImage(ceo.portrait, W / 2 - 36, 14, 72, 72);
@@ -1292,6 +1295,7 @@ function loop(now) {
     else if (state === "gameover") gameOverScreen();
     else if (state === "initials") initialsScreen();
     else if (state === "board") boardScreen();
+    else if (window.KOMBAT && KOMBAT[state]) KOMBAT[state]();
     for (const k in pressed) delete pressed[k];
     tap = null;
   }

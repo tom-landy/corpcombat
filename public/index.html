@@ -15,6 +15,8 @@
   #pad button { pointer-events: auto; width: 72px; height: 72px; border-radius: 50%; border: 3px solid #fff8; background: #c0101066; color: #fff; font: 16px "Press Start 2P", monospace; touch-action: none; }
   #pad button:active, #pad button.on { background: #ff3030aa; }
   @media (pointer: coarse) { #pad { display: flex; } }
+  #pad .k { display: none; }
+  body.kombat #pad .k { display: block; }
   #mute { position: fixed; border: 1px solid #fff6; border-radius: 4px; background: #000a; color: #fff; font-family: "Press Start 2P", monospace; cursor: pointer; z-index: 2; padding: 0; }
 </style>
 </head>
@@ -22,9 +24,10 @@
 <div id="wrap"><canvas id="c" width="384" height="224"></canvas></div>
 <button id="mute" aria-label="Mute music and sound">♪</button>
 <div id="pad">
-  <div><button data-k="left">◀</button><button data-k="right">▶</button></div>
-  <div><button data-k="special">B</button><button data-k="jump">A</button></div>
+  <div><button data-k="left">◀</button><button class="k" data-k="up">▲</button><button data-k="right">▶</button></div>
+  <div><button class="k" data-k="super">C</button><button data-k="special">B</button><button data-k="jump">A</button></div>
 </div>
 <script src="game.js"></script>
+<script src="kombat.js"></script>
 </body>
 </html>
